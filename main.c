@@ -1,6 +1,8 @@
-#include <stdio.h>
+#include "util.h"
 
-int main() {
-    printf("Hello, World!\n");
+int main(){
+
+    run("data.txt");
+
     return 0;
 }

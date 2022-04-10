@@ -3,4 +3,4 @@ project(oprend_bead C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(oprend_bead main.c util.c util.h)
+add_executable(oprend_bead main.c util.h util.c)
