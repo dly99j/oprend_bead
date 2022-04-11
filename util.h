@@ -29,6 +29,7 @@ void delete_from_file(const char*, const char*);
 void clear_database(const char*);
 char* get_name();
 char* get_place();
+void menu_wrong_format();
 void menu_goodbye();
 void menu_wrong_number();
 void menu_add(const char*);

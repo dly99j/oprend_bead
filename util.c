@@ -12,14 +12,14 @@ struct nyuszi {
 };
 
 struct nyuszi* init(const char* p_nev, const char* p_lakoterulet, int p_hanyadik) {
-    struct nyuszi* nyul = (struct nyuszi*)malloc(sizeof(struct nyuszi*));
+    struct nyuszi* nyul = (struct nyuszi*)malloc(sizeof(struct nyuszi));
     size_t nev_hossz = strlen(p_nev);
-    nyul->nev = (char*)malloc((nev_hossz)+1 * sizeof(char));
+    nyul->nev = (char*)malloc(BUFSIZE * sizeof(char));
     check_successful_alloc(nyul->nev);
     strcpy(nyul->nev, p_nev);
 
     nev_hossz = strlen(p_lakoterulet);
-    nyul->lakoterulet = (char*)malloc((nev_hossz + 1) * sizeof(char));
+    nyul->lakoterulet = (char*)malloc(BUFSIZE * sizeof(char));
     check_successful_alloc(nyul->lakoterulet);
     strcpy(nyul->lakoterulet, p_lakoterulet);
 
@@ -69,19 +69,19 @@ void delete_nyuszi(struct nyuszi* nyul) {
 
 struct nyuszi* get_nyuszi_from_user() {
     struct nyuszi* new_nyuszi;
-    char nev[BUFSIZE], lakoterulet[BUFSIZE];
+    char nev[BUFSIZE], lakoterulet[BUFSIZE], hanyadik_str[BUFSIZE];
     int hanyadik;
 
     fflush(stdin);
     //getchar();
     puts("Kerem adja meg a nevet:");
     fgets(nev, BUFSIZE, stdin);
+    nev[strlen(nev) - 1] = '\0';
 
     fflush(stdin);
     puts("Kerem adja meg a lakoteruletet:");
     fgets(lakoterulet, BUFSIZE, stdin);
 
-    nev[strlen(nev) - 1] = '\0';
     lakoterulet[strlen(lakoterulet) - 1] = '\0';
 
     while (!check_lakoterulet(lakoterulet)) {
@@ -93,8 +93,13 @@ struct nyuszi* get_nyuszi_from_user() {
 
     puts("kerem adja meg a jelentkezes szamat:");
 
-    while (scanf( "%d", &hanyadik) == 0) {
-        puts("hibas formatum");
+    fgets(hanyadik_str, BUFSIZE, stdin);
+    hanyadik_str[strlen(hanyadik_str) - 1] = '\n';
+
+    while ((hanyadik = atoi(hanyadik_str)) == 0) {
+        puts("hibas bemenet \nkerem adja meg a jelentkezes szamat:");
+        fgets(hanyadik_str, BUFSIZE, stdin);
+        hanyadik_str[strlen(hanyadik_str) - 1] = '\n';
     }
 
     new_nyuszi = init(nev, lakoterulet, hanyadik);
@@ -121,7 +126,12 @@ void list_nyuszi(const char* path, const char* place) {
     check_null_char_ptr(path);
 
     FILE* fptr = fopen(path, "r");
-    check_file_pointer(fptr);
+    //check_file_pointer(fptr);
+
+    if (fptr == NULL){
+        puts("file nem letezik vagy valami hiba lepett fel a megnyitasa kozben");
+        return;
+    }
 
     if (place != NULL && !check_lakoterulet(place)) {
         puts("nincs ilyen lakoterulet");
@@ -257,6 +267,10 @@ void clear_database(const char* path) {
     remove(path);
 }
 
+void menu_wrong_format() {
+    puts("hibas formatum");
+}
+
 void menu_goodbye() {
     puts("Viszont latasra!");
 }
@@ -302,13 +316,13 @@ void print_menu() {
     puts("-----------Husveti locsolokiraly valasztas-----------");
     puts("-----------------------------------------------------");
     puts("Kerem adja meg, mit szeretne tenni ------------------");
-    puts("0 - kilepes -----------------------------------------");
-    puts("1 - locsolo hozzaadasa ------------------------------");
-    puts("2 - locsolo modositasa ------------------------------");
-    puts("3 - locsolo torlese ---------------------------------");
-    puts("4 - listazas ----------------------------------------");
-    puts("5 - listazas teruleti alapon ------------------------");
-    puts("6 - adatbazis torlese -------------------------------");
+    puts("1 - kilepes -----------------------------------------");
+    puts("2 - locsolo hozzaadasa ------------------------------");
+    puts("3 - locsolo modositasa ------------------------------");
+    puts("4 - locsolo torlese ---------------------------------");
+    puts("5 - listazas ----------------------------------------");
+    puts("6 - listazas teruleti alapon ------------------------");
+    puts("7 - adatbazis torlese -------------------------------");
     puts("-----------------------------------------------------");
 }
 
@@ -316,8 +330,15 @@ int get_menu_point() {
     print_menu();
 
     int menu_point;
-    while (fscanf(stdin, "%d", &menu_point) != 1) {
-        puts("hibas formatum");
+
+    char input[BUFSIZE];
+    fgets(input, BUFSIZE, stdin);
+    input[strlen(input) - 1] = '\0';
+
+    if ((menu_point = atoi(input)) == 0) {
+        puts("hibas bemenet");
+        fgets(input, BUFSIZE, stdin);
+        input[strlen(input) - 1] = '\0';
     }
 
     return menu_point;
@@ -327,27 +348,27 @@ void run(const char* path) {
 
     int menu_point = get_menu_point();
 
-    while (menu_point) {
+    while (menu_point != 1) {
         switch (menu_point) {
-            case 0:
+            case 1:
                 menu_goodbye();
                 break;
-            case 1:
+            case 2:
                 menu_add(path);
                 break;
-            case 2:
+            case 3:
                 menu_modify(path);
                 break;
-            case 3:
+            case 4:
                 menu_delete(path);
                 break;
-            case 4:
+            case 5:
                 menu_list(path);
                 break;
-            case 5:
+            case 6:
                 menu_list_specific_place(path);
                 break;
-            case 6:
+            case 7:
                 menu_delete_database(path);
                 break;
             default:
