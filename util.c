@@ -14,7 +14,7 @@ struct nyuszi {
 struct nyuszi* init(const char* p_nev, const char* p_lakoterulet, int p_hanyadik) {
     struct nyuszi* nyul = (struct nyuszi*)malloc(sizeof(struct nyuszi));
     size_t nev_hossz = strlen(p_nev);
-    nyul->nev = (char*)malloc(BUFSIZE * sizeof(char));
+    nyul->nev = (char*)malloc((nev_hossz + 1) * sizeof(char));
     check_successful_alloc(nyul->nev);
     strcpy(nyul->nev, p_nev);
 
