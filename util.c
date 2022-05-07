@@ -2,13 +2,17 @@
 // Created by htomi on 3/28/2022.
 //
 #include "util.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 struct nyuszi {
     char* nev;
     char* lakoterulet;
     int hanyadik;
+};
+
+struct region_data {
+    char** nyuszik;
+    int count;
+    int region;
 };
 
 struct nyuszi* init(const char* p_nev, const char* p_lakoterulet, int p_hanyadik) {
@@ -29,6 +33,13 @@ struct nyuszi* init(const char* p_nev, const char* p_lakoterulet, int p_hanyadik
 }
 
 void check_successful_alloc(const char* allocated) {
+    if (allocated == NULL) {
+        fprintf(stderr, "unsuccessful allocation\n");
+        exit(1);
+    }
+}
+
+void check_successful_alloc2(const char** allocated) {
     if (allocated == NULL) {
         fprintf(stderr, "unsuccessful allocation\n");
         exit(1);
@@ -84,7 +95,7 @@ struct nyuszi* get_nyuszi_from_user() {
 
     lakoterulet[strlen(lakoterulet) - 1] = '\0';
 
-    while (!check_lakoterulet(lakoterulet)) {
+    while (!check_lakoterulet(lakoterulet, 0)) {
         puts("nincs ilyen lakoterulet! \nkerem adja meg a lakoteruletet:");
         fflush(stdin);
         fgets(lakoterulet, BUFSIZE, stdin);
@@ -107,10 +118,13 @@ struct nyuszi* get_nyuszi_from_user() {
     return new_nyuszi;
 }
 
-
-int check_lakoterulet(const char* lakoterulet) {
+// region == 0 --- all
+// region == 1 --- first region
+// region == 2 --- second region
+int check_lakoterulet(const char* lakoterulet, int region) {
     check_null_char_ptr(lakoterulet);
-    if (strcmp(lakoterulet, "Baratfa") == 0 ||
+    if (region == 0 &&
+        strcmp(lakoterulet, "Baratfa") == 0 ||
         strcmp(lakoterulet, "Lovas") == 0 ||
         strcmp(lakoterulet, "Szula") == 0 ||
         strcmp(lakoterulet, "Kigyos-patak") == 0 ||
@@ -118,8 +132,98 @@ int check_lakoterulet(const char* lakoterulet) {
         strcmp(lakoterulet, "Paskom") == 0 ||
         strcmp(lakoterulet, "Kaposztas kert") == 0) {
         return 1;
+    } else if (region == 1 &&
+               strcmp(lakoterulet, "Baratfa") == 0 ||
+               strcmp(lakoterulet, "Lovas") == 0 ||
+               strcmp(lakoterulet, "Kigyos-patak") == 0 ||
+               strcmp(lakoterulet, "Kaposztas kert") == 0) {
+        return 1;
+    } else if (region == 2 &&
+               strcmp(lakoterulet, "Szula") == 0 ||
+               strcmp(lakoterulet, "Malom telek") == 0 ||
+               strcmp(lakoterulet, "Paskom") == 0) {
+        return 1;
     }
     return 0;
+}
+
+int count_nyuszi(const char* path, int region) {
+    check_null_char_ptr(path);
+
+    FILE* fptr = fopen(path, "r");
+
+    int count = 0;
+    char line[BUFSIZE];
+
+    if (fptr == NULL){
+        puts("file nem letezik vagy valami hiba lepett fel a megnyitasa kozben");
+        return -1;
+    }
+
+    while (fgets(line, BUFSIZE, fptr) != NULL) {
+        if (region == 1 &&
+            strstr(line, "Baratfa") == NULL ||
+            strstr(line, "Lovas") == NULL ||
+            strstr(line, "Kigyos-patak") == NULL ||
+            strstr(line, "Kaposztas kert") == NULL) {
+            continue;
+        } else if (region == 2 &&
+                 strstr(line, "Szula") == NULL ||
+                 strstr(line, "Malom telek") == NULL ||
+                 strstr(line, "Paskom") == NULL) {
+            continue;
+        }
+        ++count;
+    }
+
+    fclose(fptr);
+
+    return count;
+}
+
+char** read_all_nyuszi(const char* path, int region) {
+
+    check_null_char_ptr(path);
+
+    FILE* fptr = fopen(path, "r");
+
+    int count = count_nyuszi(path, region);
+    int curr_nyuszi = 0;
+
+    char** ret_line = (char**)malloc(count * sizeof(char*));
+    check_successful_alloc2(ret_line);
+
+    for (int i = 0; i < count; ++i) {
+        ret_line[i] = (char*)malloc(BUFSIZE * sizeof(char));
+        check_successful_alloc(ret_line[i]);
+    }
+
+    if (fptr == NULL){
+        puts("file nem letezik vagy valami hiba lepett fel a megnyitasa kozben");
+        return NULL;
+    }
+
+    char line[BUFSIZE];
+    while (fgets(line, BUFSIZE, fptr) != NULL) {
+        if (region == 1 &&
+            strstr(line, "Baratfa") == NULL ||
+            strstr(line, "Lovas") == NULL ||
+            strstr(line, "Kigyos-patak") == NULL ||
+            strstr(line, "Kaposztas kert") == NULL) {
+            continue;
+        } else if (region == 2 &&
+                   strstr(line, "Szula") == NULL ||
+                   strstr(line, "Malom telek") == NULL ||
+                   strstr(line, "Paskom") == NULL) {
+            continue;
+        }
+        strcat(ret_line[curr_nyuszi], line);
+        ++curr_nyuszi;
+    }
+
+    fclose(fptr);
+
+    return ret_line;
 }
 
 void list_nyuszi(const char* path, const char* place) {
@@ -133,7 +237,7 @@ void list_nyuszi(const char* path, const char* place) {
         return;
     }
 
-    if (place != NULL && !check_lakoterulet(place)) {
+    if (place != NULL && !check_lakoterulet(place, 0)) {
         puts("nincs ilyen lakoterulet");
         return;
     }
@@ -253,7 +357,7 @@ char* get_place() {
     fgets(lakoterulet, BUFSIZE, stdin);
     lakoterulet[strlen(lakoterulet) - 1] = '\0';
 
-    while (!check_lakoterulet(lakoterulet)) {
+    while (!check_lakoterulet(lakoterulet, 0)) {
         puts("nincs ilyen lakoterulet! \nkerem adja meg a lakoteruletet:");
         fflush(stdin);
         fgets(lakoterulet, BUFSIZE, stdin);
@@ -265,6 +369,99 @@ char* get_place() {
 
 void clear_database(const char* path) {
     remove(path);
+}
+
+struct region_data* get_region_data(const char * path, int region) {
+    struct region_data* ret_val = (struct region_data*) malloc(sizeof(struct region_data));
+    int count = count_nyuszi(path, region);
+    char** data = read_all_nyuszi(path, region);
+
+    ret_val->region = region;
+    ret_val->count = count;
+    ret_val->nyuszik = data;
+
+    return ret_val;
+}
+
+void delete_region_data(struct region_data* data) {
+
+    for (int i = 0; i < data->count; ++i) {
+        free(data->nyuszik[i]);
+    }
+    free(data->nyuszik);
+    free(data);
+}
+
+void run_easter(const char* path) {
+
+    struct region_data* data1 = get_region_data(path, 1);
+    struct region_data* data2 = get_region_data(path, 2);
+    int fd1[2], fd2[2];
+    pid_t pid;
+    int eggs1[data1->count], eggs2[data2->count];
+
+    for (int i = 0; i < 2; ++i) {
+
+        if (pipe(fd1) == -1) {
+            perror("pipe 1 fail");
+            return;
+        }
+        if (pipe(fd2) == -1) {
+            perror("pipe 2 fail");
+            return;
+        }
+        if ((pid = fork()) == -1) {
+            perror("fork fail");
+            return;
+        }
+
+        if (0 < pid) {
+
+            srand(pid);
+            close(fd1[0]);
+
+            if (i == 0) {
+                write(fd1[1], &data1, sizeof(struct region_data*));
+            } else {
+                write(fd1[1], &data2, sizeof(struct region_data*));
+            }
+
+            wait(NULL);
+            close(fd2[1]);
+
+            if (i == 0) {
+                for (int j = 0; j < data1->count; ++j) {
+                    read(fd2[0], eggs1, data1->count * sizeof(int));
+                }
+            } else {
+                for (int j = 0; j < data2->count; ++j) {
+                    read(fd2[0], eggs2, data2->count * sizeof(int));
+                }
+            }
+
+            close(fd2[0]);
+        } else {
+
+            close(fd1[1]);
+            struct region_data data;
+            read(fd1[0], &data, sizeof(struct region_data*));
+
+            close(fd1[0]);
+            close(fd2[0]);
+
+            int eggs[data.count];
+
+            for (int j = 0; j < data.count; ++j) {
+                int num = rand() % 100 + 1;
+                eggs[j] = num;
+            }
+
+            write(fd2[1], eggs, data.count * sizeof(int));
+            close(fd2[1]);
+
+            exit(0);
+        }
+    }
 }
 
 void menu_wrong_format() {
