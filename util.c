@@ -186,6 +186,7 @@ char** read_all_nyuszi(const char* path, int region) {
     check_null_char_ptr(path);
 
     FILE* fptr = fopen(path, "r");
+    check_file_pointer(fptr);
 
     int count = count_nyuszi(path, region);
     int curr_nyuszi = 0;
@@ -196,11 +197,6 @@ char** read_all_nyuszi(const char* path, int region) {
     for (int i = 0; i < count; ++i) {
         ret_line[i] = (char*)malloc(BUFSIZE * sizeof(char));
         check_successful_alloc(ret_line[i]);
-    }
-
-    if (fptr == NULL){
-        puts("file nem letezik vagy valami hiba lepett fel a megnyitasa kozben");
-        return NULL;
     }
 
     char line[BUFSIZE];
@@ -425,22 +421,19 @@ void run_easter(const char* path) {
             close(fd1[0]);
 
             if (i == 0) {
-                write(fd1[1], &data1, sizeof(struct region_data*));
+                write(fd1[1], &data1, sizeof(struct region_data));
             } else {
-                write(fd1[1], &data2, sizeof(struct region_data*));
+                write(fd1[1], &data2, sizeof(struct region_data));
             }
+            close(fd1[1]);
 
             wait(NULL);
             close(fd2[1]);
 
             if (i == 0) {
-                for (int j = 0; j < data1.count; ++j) {
-                    read(fd2[0], eggs1, data1.count * sizeof(int));
-                }
+                read(fd2[0], eggs1, data1.count * sizeof(int));
             } else {
-                for (int j = 0; j < data2.count; ++j) {
-                    read(fd2[0], eggs2, data2.count * sizeof(int));
-                }
+                read(fd2[0], eggs2, data2.count * sizeof(int));
             }
 
             close(fd2[0]);
@@ -448,7 +441,7 @@ void run_easter(const char* path) {
 
             close(fd1[1]);
             struct region_data data;
-            read(fd1[0], &data, sizeof(struct region_data*));
+            read(fd1[0], &data, sizeof(struct region_data));
 
             close(fd1[0]);
             close(fd2[0]);
