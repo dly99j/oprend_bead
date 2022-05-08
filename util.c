@@ -162,14 +162,14 @@ int count_nyuszi(const char* path, int region) {
 
     while (fgets(line, BUFSIZE, fptr) != NULL) {
         if (region == 1 &&
-            strstr(line, "Baratfa") == NULL ||
-            strstr(line, "Lovas") == NULL ||
-            strstr(line, "Kigyos-patak") == NULL ||
+            strstr(line, "Baratfa") == NULL &&
+            strstr(line, "Lovas") == NULL &&
+            strstr(line, "Kigyos-patak") == NULL &&
             strstr(line, "Kaposztas kert") == NULL) {
             continue;
         } else if (region == 2 &&
-                 strstr(line, "Szula") == NULL ||
-                 strstr(line, "Malom telek") == NULL ||
+                 strstr(line, "Szula") == NULL &&
+                 strstr(line, "Malom telek") == NULL &&
                  strstr(line, "Paskom") == NULL) {
             continue;
         }
@@ -191,7 +191,7 @@ char** read_all_nyuszi(const char* path, int region) {
     int curr_nyuszi = 0;
 
     char** ret_line = (char**)malloc(count * sizeof(char*));
-    check_successful_alloc2(ret_line);
+    check_successful_alloc2((const char **) ret_line);
 
     for (int i = 0; i < count; ++i) {
         ret_line[i] = (char*)malloc(BUFSIZE * sizeof(char));
@@ -206,18 +206,18 @@ char** read_all_nyuszi(const char* path, int region) {
     char line[BUFSIZE];
     while (fgets(line, BUFSIZE, fptr) != NULL) {
         if (region == 1 &&
-            strstr(line, "Baratfa") == NULL ||
-            strstr(line, "Lovas") == NULL ||
-            strstr(line, "Kigyos-patak") == NULL ||
+            strstr(line, "Baratfa") == NULL &&
+            strstr(line, "Lovas") == NULL &&
+            strstr(line, "Kigyos-patak") == NULL &&
             strstr(line, "Kaposztas kert") == NULL) {
             continue;
         } else if (region == 2 &&
-                   strstr(line, "Szula") == NULL ||
-                   strstr(line, "Malom telek") == NULL ||
+                   strstr(line, "Szula") == NULL &&
+                   strstr(line, "Malom telek") == NULL &&
                    strstr(line, "Paskom") == NULL) {
             continue;
         }
-        strcat(ret_line[curr_nyuszi], line);
+        strcpy(ret_line[curr_nyuszi], line);
         ++curr_nyuszi;
     }
 
@@ -390,6 +390,13 @@ void delete_region_data(struct region_data* data) {
     }
     free(data->nyuszik);
     free(data);
+    data = NULL;
+}
+
+void print_winner(char* data, int placement) {
+
+    data[strlen(data) - 1] = '\0';
+    printf("%s, %d tojassal\n", data, placement);
 }
 
 void run_easter(const char* path) {
@@ -410,7 +417,7 @@ void run_easter(const char* path) {
             perror("pipe 2 fail");
             return;
         }
-        if ((pid = fork()) == -1) {
+        if ((pid = fork()) < 0) {
             perror("fork fail");
             return;
         }
@@ -421,9 +428,9 @@ void run_easter(const char* path) {
             close(fd1[0]);
 
             if (i == 0) {
-                write(fd1[1], &data1, sizeof(struct region_data*));
+                write(fd1[1], data1, sizeof(struct region_data*));
             } else {
-                write(fd1[1], &data2, sizeof(struct region_data*));
+                write(fd1[1], data2, sizeof(struct region_data*));
             }
 
             wait(NULL);
@@ -443,25 +450,55 @@ void run_easter(const char* path) {
         } else {
 
             close(fd1[1]);
-            struct region_data data;
+            struct region_data* data;
             read(fd1[0], &data, sizeof(struct region_data*));
 
             close(fd1[0]);
             close(fd2[0]);
 
-            int eggs[data.count];
+            int eggs[data->count];
 
-            for (int j = 0; j < data.count; ++j) {
+            for (int j = 0; j < data->count; ++j) {
                 int num = rand() % 100 + 1;
                 eggs[j] = num;
             }
 
-            write(fd2[1], eggs, data.count * sizeof(int));
+            write(fd2[1], eggs, data->count * sizeof(int));
             close(fd2[1]);
 
             exit(0);
         }
     }
+
+    int max = 0, maxind = -1;
+    bool first = true;
+
+    for (int i = 0; i < data1->count; ++i) {
+        if (max < eggs1[i]) {
+            max = eggs1[i];
+            maxind = i;
+            first = true;
+        }
+    }
+
+    for (int i = 0; i < data2->count; ++i) {
+        if (max < eggs2[i]) {
+            max = eggs2[i];
+            maxind = i;
+            first = false;
+        }
+    }
+
+    puts("Locsolokiraly:");
+
+    if (first) {
+        print_winner(data1->nyuszik[maxind], max);
+    } else {
+        print_winner(data2->nyuszik[maxind], max);
+    }
+
+    delete_region_data(data1);
+    delete_region_data(data2);
 }
 
 void menu_wrong_format() {
@@ -508,6 +545,10 @@ void menu_delete_database(const char* path) {
     remove(path);
 }
 
+void menu_run_easter(const char* path) {
+    run_easter(path);
+}
+
 void print_menu() {
     puts("-----------------------------------------------------");
     puts("-----------Husveti locsolokiraly valasztas-----------");
@@ -520,6 +561,7 @@ void print_menu() {
     puts("5 - listazas ----------------------------------------");
     puts("6 - listazas teruleti alapon ------------------------");
     puts("7 - adatbazis torlese -------------------------------");
+    puts("8 - locsoloverseny inditasa -------------------------");
     puts("-----------------------------------------------------");
 }
 
@@ -567,6 +609,9 @@ void run(const char* path) {
                 break;
             case 7:
                 menu_delete_database(path);
+                break;
+            case 8:
+                menu_run_easter(path);
                 break;
             default:
                 menu_wrong_number();
