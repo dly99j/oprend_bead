@@ -35,7 +35,7 @@ void delete_from_file(const char*, const char*);
 void clear_database(const char*);
 char* get_name();
 char* get_place();
-struct region_data* get_region_data(const char*, int);
+void get_region_data(const char*, int, struct region_data*);
 void delete_region_data(struct region_data*);
 void print_winner(char*, int);
 void run_easter(const char*);

@@ -371,16 +371,14 @@ void clear_database(const char* path) {
     remove(path);
 }
 
-struct region_data* get_region_data(const char * path, int region) {
-    struct region_data* ret_val = (struct region_data*) malloc(sizeof(struct region_data));
+void get_region_data(const char * path, int region, struct region_data* data) {
+
     int count = count_nyuszi(path, region);
-    char** data = read_all_nyuszi(path, region);
+    char** nyul_data = read_all_nyuszi(path, region);
 
-    ret_val->region = region;
-    ret_val->count = count;
-    ret_val->nyuszik = data;
-
-    return ret_val;
+    data->region = region;
+    data->count = count;
+    data->nyuszik = nyul_data;
 }
 
 void delete_region_data(struct region_data* data) {
@@ -389,8 +387,6 @@ void delete_region_data(struct region_data* data) {
         free(data->nyuszik[i]);
     }
     free(data->nyuszik);
-    free(data);
-    data = NULL;
 }
 
 void print_winner(char* data, int placement) {
@@ -401,11 +397,12 @@ void print_winner(char* data, int placement) {
 
 void run_easter(const char* path) {
 
-    struct region_data* data1 = get_region_data(path, 1);
-    struct region_data* data2 = get_region_data(path, 2);
+    struct region_data data1, data2;
+    get_region_data(path, 1, &data1);
+    get_region_data(path, 2, &data2);
     int fd1[2], fd2[2];
     pid_t pid;
-    int eggs1[data1->count], eggs2[data2->count];
+    int eggs1[data1.count], eggs2[data2.count];
 
     for (int i = 0; i < 2; ++i) {
 
@@ -422,27 +419,27 @@ void run_easter(const char* path) {
             return;
         }
 
-        if (0 < pid) {
+        if (pid > 0) {
 
             srand(pid);
             close(fd1[0]);
 
             if (i == 0) {
-                write(fd1[1], data1, sizeof(struct region_data*));
+                write(fd1[1], &data1, sizeof(struct region_data*));
             } else {
-                write(fd1[1], data2, sizeof(struct region_data*));
+                write(fd1[1], &data2, sizeof(struct region_data*));
             }
 
             wait(NULL);
             close(fd2[1]);
 
             if (i == 0) {
-                for (int j = 0; j < data1->count; ++j) {
-                    read(fd2[0], eggs1, data1->count * sizeof(int));
+                for (int j = 0; j < data1.count; ++j) {
+                    read(fd2[0], eggs1, data1.count * sizeof(int));
                 }
             } else {
-                for (int j = 0; j < data2->count; ++j) {
-                    read(fd2[0], eggs2, data2->count * sizeof(int));
+                for (int j = 0; j < data2.count; ++j) {
+                    read(fd2[0], eggs2, data2.count * sizeof(int));
                 }
             }
 
@@ -450,20 +447,19 @@ void run_easter(const char* path) {
         } else {
 
             close(fd1[1]);
-            struct region_data* data;
+            struct region_data data;
             read(fd1[0], &data, sizeof(struct region_data*));
 
             close(fd1[0]);
             close(fd2[0]);
 
-            int eggs[data->count];
-
-            for (int j = 0; j < data->count; ++j) {
+            int eggs[data.count];
+            for (int j = 0; j < data.count; ++j) {
                 int num = rand() % 100 + 1;
                 eggs[j] = num;
             }
 
-            write(fd2[1], eggs, data->count * sizeof(int));
+            write(fd2[1], eggs, data.count * sizeof(int));
             close(fd2[1]);
 
             exit(0);
@@ -473,7 +469,7 @@ void run_easter(const char* path) {
     int max = 0, maxind = -1;
     bool first = true;
 
-    for (int i = 0; i < data1->count; ++i) {
+    for (int i = 0; i < data1.count; ++i) {
         if (max < eggs1[i]) {
             max = eggs1[i];
             maxind = i;
@@ -481,7 +477,7 @@ void run_easter(const char* path) {
         }
     }
 
-    for (int i = 0; i < data2->count; ++i) {
+    for (int i = 0; i < data2.count; ++i) {
         if (max < eggs2[i]) {
             max = eggs2[i];
             maxind = i;
@@ -492,13 +488,13 @@ void run_easter(const char* path) {
     puts("Locsolokiraly:");
 
     if (first) {
-        print_winner(data1->nyuszik[maxind], max);
+        print_winner(data1.nyuszik[maxind], max);
     } else {
-        print_winner(data2->nyuszik[maxind], max);
+        print_winner(data2.nyuszik[maxind], max);
     }
 
-    delete_region_data(data1);
-    delete_region_data(data2);
+    delete_region_data(&data1);
+    delete_region_data(&data2);
 }
 
 void menu_wrong_format() {
